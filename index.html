@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- These are all copied from melvor for local testing -->
+  <link rel="stylesheet" href="https://cdn.melvor.net/core/v018/assets/js/plugins/sweetalert2/sweetalert2.min.css">
+  <link rel="stylesheet" href="https://cdn.melvor.net/core/v018/assets/js/plugins/ion-rangeslider/css/ion.rangeSlider.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap">
+  <link rel="stylesheet" id="css-main" href="https://cdn.melvor.net/core/v018/assets/css/oneui.css">
+  <link rel="stylesheet" type="text/css" href="https://cdn.melvor.net/core/v018/assets/css/lib/toastify.min.css?835">
+  <link rel="stylesheet" href="style.css?2">
+  <!-- End copied stylesheets -->
+  <title>Document</title>
+</head>
+<body>
+  <script>
+    let test = {}
+    console.log(test.modifier)
+  </script>
+  <h5 class="font-w400 text-left text-combat-smoke m-1 mb-2">
+    <div class="custom-control custom-switch mb-2">
+      <input type="checkbox" class="custom-control-input" id="a">
+      <label class="custom-control-label font-w400 font-size-sm text-combat-smoke" for="a">Equip Item - Use Current Equipment Set as Default.</label>
+    </div>
+
+    <div class="custom-control custom-switch mb-2">
+      <input type="checkbox" class="custom-control-input" id="settings-bank-bankBorder" name="settings-bank-bankBorder" checked>
+      <label class="custom-control-label font-w400 font-size-sm text-combat-smoke" for="settings-bank-bankBorder">Use default Bank Border style.</label>
+    </div>
+
+    <div class="dropdown">
+      <button type="button" class="btn btn-secondary dropdown-toggle mt-2" id="dropdown-default-secondary" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" onclick="">
+      Slot to Roll For
+      </button>
+      <div class="dropdown-menu font-size-sm" aria-labelledby="dropdown-default-secondary">
+        <a class="dropdown-item" onclick="cyrogemSelectSlot(0)">Helmet</a>
+        <a class="dropdown-item" onclick="cyrogemSelectSlot(1)">Body</a>
+        <a class="dropdown-item" onclick="cyrogemSelectSlot(2)">Legs</a>
+        <a class="dropdown-item" onclick="cyrogemSelectSlot(3)">Boots</a>
+        <a class="dropdown-item" onclick="cyrogemSelectSlot(4)">Weapon</a>
+        <a class="dropdown-item" onclick="cyrogemSelectSlot(5)">Shield</a>
+        <a class="dropdown-item" onclick="cyrogemSelectSlot(6)">Amulet</a>
+        <a class="dropdown-item" onclick="cyrogemSelectSlot(7)">Ring</a>
+        <a class="dropdown-item" onclick="cyrogemSelectSlot(8)">Gloves</a>
+        <a class="dropdown-item" onclick="cyrogemSelectSlot(9)">Quiver</a>
+        <a class="dropdown-item" onclick="cyrogemSelectSlot(10)">Cape</a>
+      </div>
+    </div>
+
+    <div id="cyrogem-player-desires"></div>
+  </h5>
+  <script src="MelvorCorruptionHelper.js"></script>
+</body>
+</html>
