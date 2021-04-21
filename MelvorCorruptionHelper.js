@@ -9,11 +9,14 @@
 // @grant        none
 // ==/UserScript==
 
-
+const skillSpecificModifiers = [
+  40, 95, 103, 104, 107, 108, 132,
+]
 let allTraitsWanted = {}
 let newDesireTrait = -1
 let newDesireValue = -1
 let newDesireSlot = -1
+let newDesireSkill = -1
 let iterations = 0
 let lostItems = 0
 let rolls = 0
@@ -22,31 +25,36 @@ let activeModifiers = [];
 
 
 function CyrogemRollCorruption(){
-  if (newDesireSlot === -1 || newDesireValue === -1 || newDesireTrait === -1){// || allTraitsWanted === {}) {
-    window.alert('invalid roll conditions')
+  if (newDesireSlot < 0){
+    window.alert('Please select a slot to roll for')
     return;
   }
-  
   let equipmentSlot = newDesireSlot
   let cost = getRandomModifierCost(equipmentSlot);
   let keepTrying = true
   let mods = {}
   lostItems = 0
   rolls = 0
-  let newmod = activeModifiers[newDesireTrait]
-  allTraitsWanted[newmod] = newDesireValue
 
+  // Test to make sure we have the things
+  let atLeastOneKey = false
   for(var key in allTraitsWanted) {
+    atLeastOneKey = true
     var value = allTraitsWanted[key];
-    console.log(key)
-    // do something with "key" and "value" variables
+    //console.log(key + ' ' + value)
   }
+
+  if (!atLeastOneKey){
+    window.alert('Please have at least one desire')
+    return;
+  }
+
   // Re-roll
   for(let i = 0; i < iterations && keepTrying; i++){
     rolls++
     // Will only roll down to 10 left to avoid screwing people over automatically
     //console.log(cost + ' ' + equippedItems[equipmentSlot])
-    if (gp >= cost && equippedItems[equipmentSlot] > 10) {
+    if (gp >= cost && equippedItems[equipmentSlot] > 0) {
       gp -= cost;
       updateGP();
       let tier = getRandomModifierTier(equipmentSlot);
@@ -69,7 +77,7 @@ function CyrogemRollCorruption(){
         }
       } else {
         mods = rollRandomModifiers(tier, "equipment", equipmentSlot);
-        keepTrying = !CheckCorruption(mods)
+        keepTrying = !CyrogemCheckCorruption(mods)
       }
     } else {
       rolls--
@@ -78,21 +86,31 @@ function CyrogemRollCorruption(){
   }
   updateRandomModifierInfo(equipmentSlot);
   updateHTMLRandomMod(equipmentSlot, mods);
-  window.alert('We ' + (keepTrying ? 'failed' : 'succeeded') + ' after ' + rolls + ' re-rolls')
+  window.alert('We ' + (keepTrying ? 'failed' : 'succeeded') + ' after ' + rolls + ' re-rolls and lost ' + lostItems + ' to the void')
 }
-function CheckCorruption(mods){
+function CyrogemCheckCorruption(mods){
   let success = false
   for (let i = 0; i < mods.length && !success; i++) {
     let theMod = mods[i].modifier
-    console.log(mods[i].modifier + ' ' + mods[i].value)
-    if (mods[i].value.length) {
-      if (allTraitsWanted[mods[i].modifier] !== undefined && allTraitsWanted[mods[i].modifier] <= mods[i].value[0]){
-        success = true
+    let theValue = mods[i].value
+    //console.log(theMod + ' ' + theValue)
+    // Is the value a list
+    if (theValue.length) {
+      // This is a niche event, is this something we are looking for
+      // Get it out of it's inner shell
+      theValue = theValue[0]
+      let theSkillName = skillName[theValue[0]]
+      //console.log('skill name = ' + theSkillName)
+      // Check if we have this defined as a desire
+      if (allTraitsWanted[theMod] !== undefined && allTraitsWanted[theMod][theSkillName] !== undefined){
+        // We have it defined, is it high enough of a value
+        if (allTraitsWanted[theMod][theSkillName] <= theValue[1]){
+          success = true
+        }
       }
     }
     else{
-      let theMod = mods[i].modifier
-      if (allTraitsWanted[mods[i].modifier] !== undefined && allTraitsWanted[mods[i].modifier] <= mods[i].value) {
+      if (allTraitsWanted[theMod] !== undefined && allTraitsWanted[theMod] <= theValue) {
         success = true
       }
     }
@@ -100,12 +118,134 @@ function CheckCorruption(mods){
   // If we have one of the ones we want, return true
   return success
 }
+function CyrogemAddDesire(){
+  if (newDesireValue === -1 || newDesireValue === '' || newDesireTrait === -1 || (skillSpecificModifiers.includes(newDesireTrait) && newDesireSkill === -1)){
+    window.alert('Please Select a Slot, Desired Trait(s), Desired Value(s), and a Desired Skill if aplicable')
+    return;
+  }
+
+  let newmod = activeModifiers[newDesireTrait]
+  // Is this a special case where we need a skill specified
+  if(skillSpecificModifiers.includes(newDesireTrait)){
+    // Initial setup in case this is our first one
+    if (allTraitsWanted[newmod] === undefined){
+      allTraitsWanted[newmod] = {}
+    }
+    // Assign this with the skillName
+    allTraitsWanted[newmod][skillName[newDesireSkill]] = newDesireValue
+  } else {
+    allTraitsWanted[newmod] = newDesireValue
+  }
+
+  CyrogemUpdateDesires()
+  
+  // Debugging
+  /*
+  for(var key in allTraitsWanted) {
+    var value = allTraitsWanted[key];
+    if(typeof value === 'object' && value !== null){
+      for(var key2 in value){
+        console.log(
+          'My path is: allTraitsWanted[' + key + '][' + key2 + ']' +
+          '\nand I equal ' + allTraitsWanted[key][key2]
+        )
+      }
+    } else {
+      console.log(key + ' ' + value)
+    }
+  }
+  */
+}
+function CyrogemRemoveDesire(trait, skill=null){
+  // Easy one first
+  //console.log(allTraitsWanted[trait] + ' before')
+  if (skill === null){
+    delete allTraitsWanted[trait];
+  } else {
+    var value = allTraitsWanted[trait];
+    if(typeof value === 'object' && value !== null){
+      delete value[skill];
+    }
+  }
+  //console.log(allTraitsWanted.trait + ' after')
+  CyrogemUpdateDesires()
+}
+function CyrogemUpdateDesires(){
+  const displayElement = document.getElementById('cyrogem-current-desires')
+  let atLeastOneTrait = false
+  
+  displayElement.innerHTML = ''
+  // Create a button for every current desire to show and allow it to be clicked to remove said desire
+  for(var trait in allTraitsWanted) {
+    atLeastOneTrait = true
+    let value = allTraitsWanted[trait]
+    // Is this a skill specific desire
+    if (typeof value === 'object' && value !== null){
+      for(var skill in value){
+        let indexOfName = skillName.indexOf(skill)
+        let theFinalValue = allTraitsWanted[trait][skill]
+        displayElement.innerHTML += '<button type="button" class="btn btn-dark m-1" id="kill-desire-' + trait +'-'+ skill + '" aria-label="">' + printPlayerModifier(trait, [indexOfName, theFinalValue])[0] + '</button>'
+        // let option = document.getElementById('kill-desire-' + trait +'-'+ skill)
+        // if(option !== null){
+        //   option.addEventListener("click", () => CyrogemRemoveDesire(trait,skill))
+        //   console.log(trait + ' ' + skill + ' added listener')
+        // }
+        //desireHTML += '<a class="dropdown-item" id="kill-desire-' + trait +'-'+ skill + '">' + printPlayerModifier(trait, [skillName.indexof(skill), allTraitsWanted[trait][skill]]) + '</a>'
+      }
+    } else {
+      displayElement.innerHTML += '<button type="button" class="btn btn-dark m-1" id="kill-desire-' + trait + '" aria-label="">' + printPlayerModifier(trait, value)[0] + '</button>'
+      //document.getElementById('kill-desire-' + trait).addEventListener("click", () => CyrogemRemoveDesire(trait))
+      //desireHTML += '<a class="dropdown-item" id="kill-desire-' + trait + '">' + printPlayerModifier(trait, [skillName.indexof(skill), value]) + '</a>'
+    }
+  }
+
+  for(var trait in allTraitsWanted){
+    let value = allTraitsWanted[trait]
+    if(typeof value === 'object' && value !== null){
+      for(var skill in value){
+        document.getElementById('kill-desire-' + trait +'-'+ skill).addEventListener("click", () => CyrogemRemoveDesire(trait,skill))
+      }
+    } else {
+      document.getElementById('kill-desire-' + trait).addEventListener("click", () => CyrogemRemoveDesire(trait))
+    }
+  }
+/*
+  let html = `<h5 class="font-w600 font-size-sm mb-2">Current Modifiers:</h5>`;
+  for (let i = 0; i < mods.length; i++) {
+      if (mods[i].value.length)
+          modifier = printPlayerModifier(mods[i].modifier, mods[i].value[0]);
+      else
+          modifier = printPlayerModifier(mods[i].modifier, mods[i].value);
+      html += `<h5 class="font-w400 font-size-sm mb-1 ${modifier[1]}">${modifier[0]}</h5>`;
+  }
+*/
+  if(!atLeastOneTrait){
+    displayElement.innerHTML += "Choose at least one desire"
+    //desireHTML += "Choose at least one desire"
+  }
+
+  //document.getElementById('cyrogem-current-desires').innerHTML = desireHTML
+
+  // Setup buttons
+}
 function CyrogemMaxCost(){
   let info = 'Max Cost: ' + '<img src="assets/media/main/coins.svg" class="skill-icon-xs mr-2">'
 }
 function CyrogemDesiredTrait(index){
   newDesireTrait = index
   document.getElementById('cyrogem-desire-display-span').textContent = activeModifiers[newDesireTrait]
+  // Does this target specific skills
+  if (skillSpecificModifiers.includes(newDesireTrait)){
+    console.log('more info needed')
+    document.getElementById('cyrogem-desire-extra').className = ""
+  } else {
+    document.getElementById('cyrogem-desire-extra').className = "d-none"
+  }
+}
+function CyrogemDesiredSkill(index){
+  console.log(index)
+  newDesireSkill = index
+  document.getElementById('cyrogem-desire-extra-span').textContent = skillName[newDesireSkill]
 }
 function CyrogemDesiredValue(){
   const valueHTML = document.getElementById('cyrogem-desire-value')
@@ -144,9 +284,16 @@ function CyrogemLoadCorruptionHelper () {
     activeModifiers.push(Object.keys(playerModifiersTemplate)[i]);
   }
   
-  // Setup Desire Dropdown
+  // Setup the entire block
   let playerDesiresHTML = 
-  '<div class="block block-rounded block-link-pop border-top border-info border-4x row no-gutters"><div class="col-3">' +
+  '<div class="block block-rounded block-link-pop border-top border-info border-4x row no-gutters">'
+
+
+  // First Column
+  playerDesiresHTML +=
+  '<div class="col-sm-6 col-lg-4"><div class=block-content>'
+  // Setup Desire Dropdown
+  playerDesiresHTML +=
   '<div class="dropdown"><button type="button" class="btn btn-secondary dropdown-toggle mt-2" id="cyrogem-desire-dropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Desired Attribute</button>' +
   '<div class="dropdown-menu font-size-sm" aria-labelledby="cyrogem-desire-dropdown">'
   for (let i = 0; i < activeModifiers.length; i++){
@@ -155,12 +302,36 @@ function CyrogemLoadCorruptionHelper () {
   }
   playerDesiresHTML += '</div></div>' +
   '<span class="font-w400 font-size-sm text-combat-smoke ml-2">Desire: <span id="cyrogem-desire-display-span" style="text-transform: capitalize;">Select One</span></span>'
-  
+  // Oh god we have to add another check for specific skill ones like "increasedSmithingMasteryXP"
+  playerDesiresHTML +=
+  '<div class="d-none" id="cyrogem-desire-extra">' +
+  // We need a new dropdown for all the skills
+  '<div class="dropdown"><button type="button" class="btn btn-secondary dropdown-toggle mt-2" id="cyrogem-desire-extra-dropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Skill</button>' +
+  '<div class="dropdown-menu font-size-sm" aria-labelledby="cyrogem-desire-extra-dropdown">'
+  for (let i = 0; i < skillName.length; i++){
+    playerDesiresHTML += '<a class="dropdown-item" id="cyrogemDesiredSkill' + i + '" style="text-transform: capitalize;">' + skillName[i] + '</a>'
+  }
+  playerDesiresHTML += '</div></div>' +
+  '<span class="font-w400 font-size-sm text-combat-smoke ml-2">Target Skill: <span id="cyrogem-desire-extra-span" style="text-transform: capitalize;">Select One</span></span>' +
+  '</div>'
+
   // What value do you want
   playerDesiresHTML += '<div class="col-12"><input type="number" class="form-control m-1" id="cyrogem-desire-value" placeholder="0"></div>' +
-  '<span class="font-w400 font-size-sm text-combat-smoke ml-2">Minimum: <span id="cyrogem-desire-display-value">0</span></span>'
+  '<span class="font-w400 font-size-sm text-combat-smoke ml-2">Minimum Level: <span id="cyrogem-desire-display-value">Enter above</span></span>'
   
   // What slot are we changing
+  playerDesiresHTML +=
+  '<div class="col-12"><button type="button" class="swal2-confirm swal2-styled" id="cyrogem-add-desire" aria-label="" style="display: inline-block; border-left-color: rgb(48, 133, 214); border-right-color: rgb(48, 133, 214);">Add Desire</button></div>'
+  
+  // Close the content block and column div
+  playerDesiresHTML += '</div></div>'
+  
+
+  // Second column
+  playerDesiresHTML += '<div class="col-sm-3"><div class=block-content>' +
+  '<div class="col-12"><input type="number" class="form-control m-1" id="cyrogem-iterations" placeholder="0"></div>' +
+  '<span class="font-w400 font-size-sm text-combat-smoke ml-2">Try how many times<br>(Assuming you can afford it): <span id="cyrogem-iterations-display">0</span></span>'
+  
   playerDesiresHTML += '<div class="dropdown"><button type="button" class="btn btn-secondary dropdown-toggle mt-2" id="cyrogem-slot-dropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" onclick="">' +
   'Slot to Roll For</button><div class="dropdown-menu font-size-sm" aria-labelledby="cyrogem-slot-dropdown">' +
   '<a class="dropdown-item" id="cyrogemSelectSlot0">Helmet</a>' +
@@ -177,24 +348,21 @@ function CyrogemLoadCorruptionHelper () {
   '</div></div>'+
   '<span class="font-w400 font-size-sm text-combat-smoke ml-2">Slot: <span id="cyrogem-desire-slot-span">Select One</span></span>'
 
-  // Close the column div
-  playerDesiresHTML += '</div>'
+  // Close the block and column div
+  playerDesiresHTML += '</div></div>'
 
-  // Next column
-  playerDesiresHTML += '<div class="col-3">' +
-  '<div class="col-12"><input type="number" class="form-control m-1" id="cyrogem-iterations" placeholder="0"></div>' +
-  '<span class="font-w400 font-size-sm text-combat-smoke ml-2">Try how many times<br>(Assuming you can afford it): <span id="cyrogem-iterations-display">0</span></span>'
+  // Third column
+  playerDesiresHTML += '<div class="col-md-5"><div class=block-content>'
 
-  // Close the column div
-  playerDesiresHTML += '</div>'
-
-  // Next column
-  playerDesiresHTML += '<div class="col-6">' +
+  // Display current wishes 
+  playerDesiresHTML += '<div class="text-center" id="cyrogem-current-desires"></div>'
+  
+  // Close the block and column div
+  playerDesiresHTML += '</div></div>'
+  
+  // NEW ROW
+  playerDesiresHTML +=
   '<div class="col-12"><button type="button" class="swal2-confirm swal2-styled" id="cyrogem-roll-button" aria-label="" style="display: inline-block; border-left-color: rgb(48, 133, 214); border-right-color: rgb(48, 133, 214);">Roll For It</button></div>'
-  
-  // Close the column div
-  playerDesiresHTML += '</div>'
-  
   // Close the box div
   playerDesiresHTML += '</div>'
   
@@ -209,6 +377,13 @@ function CyrogemLoadCorruptionHelper () {
       option.addEventListener("click", () => CyrogemDesiredTrait(i))
     }
   }
+  // Setup skill links
+  for(let i = 0; i < skillName.length; i++){
+    let option = document.getElementById('cyrogemDesiredSkill' + i)
+    if(option !== null){
+      option.addEventListener("click", () =>  CyrogemDesiredSkill(i))
+    }
+  }
   // Setup slot links
   for(let i = 0; i <= 10; i++){
     //console.log(i)
@@ -216,10 +391,15 @@ function CyrogemLoadCorruptionHelper () {
   }
   // Setup value link
   document.getElementById('cyrogem-desire-value').addEventListener("input", () => CyrogemDesiredValue())
+  document.getElementById('cyrogem-desire-value').addEventListener("change", () => CyrogemDesiredValue())
   // Setup quantity link
   document.getElementById('cyrogem-iterations').addEventListener("input", () => CyrogemDesiredTries())
-  // Setup button
+  // Setup roll button
   document.getElementById('cyrogem-roll-button').addEventListener("click", () => CyrogemRollCorruption())
+  // Setup desire button
+  document.getElementById('cyrogem-add-desire').addEventListener("click", () => CyrogemAddDesire())
+
+  CyrogemUpdateDesires()
 }
 
 (function () {
@@ -255,6 +435,7 @@ function rollRandomModifiers(count=3, key, equipmentSlot=0) {
       let value;
       let maxValue = getRandomModifierMaxValue(count);
       if (playerModifiersTemplate[activeModifiers[rngMod]].length)
+      // ------------ value is skill index 0, value index 1 ----------------------------------------------------------------------------------------------------------------------
           value = [[Math.floor(Math.random() * 21), Math.floor(Math.random() * maxValue)]];
       else
           value = Math.floor(Math.random() * maxValue);
