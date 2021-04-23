@@ -39,9 +39,13 @@ function CyrogemRollCorruption(){
   // Test to make sure we have the things
   let atLeastOneKey = false
   for(var key in allTraitsWanted) {
-    atLeastOneKey = true
     var value = allTraitsWanted[key];
-    //console.log(key + ' ' + value)
+    if (typeof value === 'object' && value !== null){
+      atLeastOneKey = Object.keys(value).length > 0 || atLeastOneKey
+    } else {
+      atLeastOneKey = true
+    }
+    console.log(key + ' ' + value)
   }
 
   if (!atLeastOneKey){
