@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         Melvor Idle Corruption Helper
 // @namespace    http://tampermonkey.net/
-// @version      0.1
-// @description  Automate your RNG
+// @version      1.0.1
+// @description  Automate rolling for specific modifiers in Corruption Mode (April Fools 2021 event)
 // @author       Cyrogem
+// @site         https://www.cyrogemgames.com/
 // @match        https://*.melvoridle.com/*
 // @exclude      https://wiki.melvoridle.com/*
 // @grant        none
@@ -23,7 +24,9 @@ let rolls = 0
 
 let activeModifiers = [];
 
-
+/**
+ * Roll for corruption based on the previously input information
+ */
 function CyrogemRollCorruption(){
   if (newDesireSlot < 0){
     window.alert('Please select a slot to roll for')
@@ -56,7 +59,6 @@ function CyrogemRollCorruption(){
   // Re-roll
   for(let i = 0; i < iterations && keepTrying; i++){
     rolls++
-    // Will only roll down to 10 left to avoid screwing people over automatically
     //console.log(cost + ' ' + equippedItems[equipmentSlot])
     if (gp >= cost && equippedItems[equipmentSlot] > 0) {
       gp -= cost;
@@ -93,6 +95,11 @@ function CyrogemRollCorruption(){
   window.alert('We ' + (keepTrying ? 'failed' : 'succeeded') + ' after ' + rolls + ' re-rolls and lost ' + lostItems + ' to the void')
 }
 
+/**
+ * Are these mods what we desire
+ * @param {*} mods The newly rolled mods
+ * @returns True if a mod matches a desire
+ */
 function CyrogemCheckCorruption(mods){
   let success = false
   for (let i = 0; i < mods.length && !success; i++) {
@@ -124,6 +131,11 @@ function CyrogemCheckCorruption(mods){
   return success
 }
 
+/**
+ * Remember current desire to check against when we roll
+ * 
+ * Also creates button to remove desire 
+ */
 function CyrogemAddDesire(){
   if (newDesireValue === -1 || newDesireValue === '' || newDesireTrait === -1 || (skillSpecificModifiers.includes(newDesireTrait) && newDesireSkill === -1)){
     window.alert('Please Select a Slot, Desired Trait(s), Desired Value(s), and a Desired Skill if aplicable')
@@ -143,32 +155,28 @@ function CyrogemAddDesire(){
     allTraitsWanted[newmod] = newDesireValue
   }
 
-  if (ErikTactic){
-    // Let's try Erik's way
-    const displayElement = document.getElementById('cyrogem-current-desires')
-    const buttonTemplate = document.getElementById('cyrogem-button-template')
-    const newButton = document.importNode(buttonTemplate.content.firstElementChild, true)
-    
-    // Is this a skill specific desire
-    if(skillSpecificModifiers.includes(newDesireTrait)){
-      let trait = activeModifiers[newDesireTrait]
-      let skill = skillName[newDesireSkill]
-      newButton.id = 'kill-desire-' + trait + '-' + skill 
-      newButton.innerHTML = printPlayerModifier(trait, [newDesireSkill, newDesireValue])[0]
-      newButton.addEventListener('click', () => CyrogemRemoveDesire(trait, skill))
-    } else {
-      let trait = activeModifiers[newDesireTrait]
-      newButton.id = 'kill-desire-' + trait
-      newButton.innerHTML = printPlayerModifier(trait, newDesireValue)[0]
-      newButton.addEventListener('click', () => CyrogemRemoveDesire(trait))
-    }
-
-    displayElement.appendChild(newButton)
-  }
+  // Erik Gillespie solved this issue
+  const displayElement = document.getElementById('cyrogem-current-desires')
+  const buttonTemplate = document.getElementById('cyrogem-button-template')
+  const newButton = document.importNode(buttonTemplate.content.firstElementChild, true)
   
+  // Is this a skill specific desire
+  if(skillSpecificModifiers.includes(newDesireTrait)){
+    let trait = activeModifiers[newDesireTrait]
+    let skill = skillName[newDesireSkill]
+    newButton.id = 'kill-desire-' + trait + '-' + skill 
+    newButton.innerHTML = printPlayerModifier(trait, [newDesireSkill, newDesireValue])[0]
+    newButton.addEventListener('click', () => CyrogemRemoveDesire(trait, skill))
+  } else {
+    let trait = activeModifiers[newDesireTrait]
+    newButton.id = 'kill-desire-' + trait
+    newButton.innerHTML = printPlayerModifier(trait, newDesireValue)[0]
+    newButton.addEventListener('click', () => CyrogemRemoveDesire(trait))
+  }
 
-  if (!ErikTactic) CyrogemUpdateDesires()
-  else CyrogemUpdatePrediction()
+  displayElement.appendChild(newButton)
+  
+  CyrogemUpdatePrediction()
   
   // Debugging
   /*
@@ -188,103 +196,35 @@ function CyrogemAddDesire(){
   */
 }
 
+/**
+ * Remove a currently listed desire
+ * @param {*} trait What desire are we removing
+ * @param {*} skill What skill, if any, are we removing from this trait
+ */
 function CyrogemRemoveDesire(trait, skill=null){
   // Easy one first
   //console.log(allTraitsWanted[trait] + ' before')
   if (skill === null){
     delete allTraitsWanted[trait];
-    if(ErikTactic) document.getElementById('kill-desire-' + trait).remove()
+    document.getElementById('kill-desire-' + trait).remove()
   } else {
     var value = allTraitsWanted[trait];
     if(typeof value === 'object' && value !== null){
       delete value[skill];
-      if(ErikTactic) document.getElementById('kill-desire-' + trait + '-' + skill).remove()
+      document.getElementById('kill-desire-' + trait + '-' + skill).remove()
     }
   }
   //console.log(allTraitsWanted.trait + ' after')
-  if (!ErikTactic) CyrogemUpdateDesires()
-  else CyrogemUpdatePrediction()
+  CyrogemUpdatePrediction()
 }
 
+// Erik Gillespie provided the solutino to buttons losing eventHandlers
+// A lot of old code was removed thanks to him
 const ErikTactic = true
 
-function CyrogemUpdateDesires(){
-  console.log('Update desires was called')
-  CyrogemUpdatePrediction()
-  const displayElement = document.getElementById('cyrogem-current-desires')
-  if(!ErikTactic){
-    //let displayHTML = ''
-    let atLeastOneTrait = false
-
-    displayElement.innerHTML = ''
-    //displayHTML +=
-    //'<h5 class="font-w700 font-size-sm text-center text-success m-1 mb-2">Desired Mods. Click to remove one.</h5>'
-    // Create a button for every current desire to show and allow it to be clicked to remove said desire
-    for(var trait in allTraitsWanted) {
-      atLeastOneTrait = true
-      let value = allTraitsWanted[trait]
-      // Is this a skill specific desire
-      if (typeof value === 'object' && value !== null){
-        for(var skill in value){
-          let indexOfName = skillName.indexOf(skill)
-          let theFinalValue = allTraitsWanted[trait][skill]
-          displayElement.innerHTML += '<button type="button" class="btn btn-dark m-1" id="kill-desire-' + trait +'-'+ skill + '" aria-label="">' + printPlayerModifier(trait, [indexOfName, theFinalValue])[0] + '</button>'
-          //displayHTML += '<button type="button" class="btn btn-dark m-1" id="kill-desire-' + trait +'-'+ skill + '" aria-label="">' + printPlayerModifier(trait, [indexOfName, theFinalValue])[0] + '</button>'
-        }
-      } else {
-        displayElement.innerHTML += '<button type="button" class="btn btn-dark m-1" id="kill-desire-' + trait + '" aria-label="">' + printPlayerModifier(trait, value)[0] + '</button>'
-        //displayHTML += '<button type="button" class="btn btn-dark m-1" id="kill-desire-' + trait + '" aria-label="">' + printPlayerModifier(trait, value)[0] + '</button>'
-      }
-    }
-    /*
-    if(!atLeastOneTrait){
-      displayElement.innerHTML += "Choose at least one desire"
-      //displayHTML += "Choose at least one desire"
-    }
-    */
-    //document.getElementById('cyrogem-current-desires').insertAdjacentHTML('afterbegin', displayHTML)
-
-    // Setup buttons
-    for(var trait in allTraitsWanted){
-      let value = allTraitsWanted[trait]
-      if(typeof value === 'object' && value !== null){
-        for(var skill in value){
-          document.getElementById('kill-desire-' + trait +'-'+ skill).addEventListener("click", () => CyrogemRemoveDesire(trait,skill))
-        }
-      } else {
-        document.getElementById('kill-desire-' + trait).addEventListener("click", () => CyrogemRemoveDesire(trait))
-      }
-    }
-
-  } else {
-    // Let's try Erik's way
-    const buttonTemplate = document.getElementById('cyrogem-button-template')
-
-    for(var trait in allTraitsWanted) {
-      const newButton = document.importNode(buttonTemplate.content.firstElementChild, true)
-      
-      let value = allTraitsWanted[trait]
-      // Is this a skill specific desire
-      if (typeof value === 'object' && value !== null){
-        for(var skill in value){
-          let indexOfName = skillName.indexOf(skill)
-          let theFinalValue = allTraitsWanted[trait][skill]
-          newButton.id = 'kill-desire-' + trait + '-' + skill
-          newButton.innerHTML = printPlayerModifier(trait, [indexOfName, theFinalValue])[0]
-          newButton.addEventListener('click', () => CyrogemRemoveDesire(trait,skill))
-        }
-      } else {
-        newButton.id = 'kill-desire-' + trait
-        newButton.innerHTML = printPlayerModifier(trait, value)[0]
-        newButton.addEventListener('click', () => CyrogemRemoveDesire(trait))
-      }
-
-      displayElement.appendChild(newButton)
-    }
-
-  }
-}
-
+/**
+ * Update the display for the player showing the expected outcome
+ */
 function CyrogemUpdatePrediction(){
   let predictionHTML = ''
   // Assemble info only needed here
@@ -332,6 +272,11 @@ function CyrogemUpdatePrediction(){
   document.getElementById('cyrogem-predictive-display').innerHTML = predictionHTML
 }
 
+/**
+ * Calculates how many rolls are required to get a 50% chance or better of success
+ * @param {*} failChancePerRoll Odds of not getting what you want every roll
+ * @returns Roll count and closing span tag
+ */
 function CyrogemRollsForFiftyPercent(failChancePerRoll){
   if(failChancePerRoll < 0.0 || failChancePerRoll >= 1.0){
     return 'Never</span>';
@@ -351,6 +296,11 @@ function CyrogemRollsForFiftyPercent(failChancePerRoll){
   }
 }
 
+/**
+ * Color and format the success chance for players
+ * @param {*} successChance Odds of success for all rolls
+ * @returns formatted HTML
+ */
 function CyrogemRollChanceColor(successChance){
   let textMod = ''
   if(successChance <= 0.33){
@@ -364,6 +314,10 @@ function CyrogemRollChanceColor(successChance){
   return output;
 }
 
+/**
+ * Set the desired Trait
+ * @param {*} index index of the trait from activeModifiers
+ */
 function CyrogemDesiredTrait(index){
   newDesireTrait = index
   document.getElementById('cyrogem-desire-display-span').textContent = activeModifiers[newDesireTrait]
@@ -376,18 +330,28 @@ function CyrogemDesiredTrait(index){
   }
 }
 
+/**
+ * Set the desired Skill
+ * @param {*} index index of the skill from skillName
+ */
 function CyrogemDesiredSkill(index){
   console.log(index)
   newDesireSkill = index
   document.getElementById('cyrogem-desire-extra-span').textContent = skillName[newDesireSkill]
 }
 
+/**
+ * Set the desired value to the input field value
+ */
 function CyrogemDesiredValue(){
   const valueHTML = document.getElementById('cyrogem-desire-value')
   newDesireValue = valueHTML.value
   document.getElementById('cyrogem-desire-display-value').textContent = newDesireValue
 }
 
+/**
+ * Set the desired tries to the input field value
+ */
 function CyrogemDesiredTries(){
   const valueHTML = document.getElementById('cyrogem-iterations')
   iterations = valueHTML.value
@@ -395,6 +359,10 @@ function CyrogemDesiredTries(){
   CyrogemUpdatePrediction()
 }
 
+/**
+ * Choose an equipment slot to roll for
+ * @param {*} slot index of slot
+ */
 function CyrogemSelectSlot(slot){
   newDesireSlot = slot
   let slotName = 'Slot'
@@ -415,6 +383,9 @@ function CyrogemSelectSlot(slot){
   CyrogemUpdatePrediction()
 }
 
+/**
+ * Load the tool, setup references, inject HTML
+ */
 function CyrogemLoadCorruptionHelper () {
   let bannedModifiers = ["golbinRaidWaveSkipCostReduction", "golbinRaidIncreasedMinimumFood", "golbinRaidIncreasedMaximumAmmo", "golbinRaidIncreasedMaximumRunes", "golbinRaidPrayerUnlocked", "golbinRaidIncreasedPrayerLevel", "golbinRaidIncreasedPrayerPointsStart", "golbinRaidIncreasedPrayerPointsWave", "golbinRaidPassiveSlotUnlocked", "golbinRaidIncreasedStartingRuneCount", "golbinRaidStartingWeapon", "freeBonfires", "autoSlayerUnlocked", "increasedEquipmentSets", "dungeonEquipmentSwapping", "increasedTreeCutLimit", "increasedAttackRolls", "decreasedAttackRolls", "increasedBankSpaceShop", "decreasedBankSpaceShop", "increasedGPFromSales", "decreasedGPFromSales", ];
   activeModifiers = [];
@@ -546,14 +517,12 @@ function CyrogemLoadCorruptionHelper () {
   // Setup desire button
   document.getElementById('cyrogem-add-desire').addEventListener("click", () => CyrogemAddDesire())
   
-  if(!ErikTactic) CyrogemUpdateDesires()
-  else CyrogemUpdatePrediction()
+  CyrogemUpdatePrediction()
 }
 
-function CyrogemSetupEverySingleButtonAgain(){
-  
-}
-
+/**
+ * Inject after page loads
+ */
 (function () {
   function loadScript() {
       //console.log(window.isLoaded + ' ' + !window.currentlyCatchingUp);// + ' ' + (typeof unsafeWindow !== 'undefined') ? ' ' + unsafeWindow.isLoaded + ' ' + !unsafeWindow.currentlyCatchingUp : '')
@@ -569,6 +538,7 @@ function CyrogemSetupEverySingleButtonAgain(){
   const scriptLoader = setInterval(loadScript, 200);
 })();
 
+// Melvor backend code copied for quick reference
 /*
 function rollRandomModifiers(count=3, key, equipmentSlot=0) {
   if (key === "equipment") {
