@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         Melvor Idle Corruption Helper
 // @namespace    http://tampermonkey.net/
-// @version      1.0.1
+// @version      1.0.2
 // @description  Automate rolling for specific modifiers in Corruption Mode (April Fools 2021 event)
 // @author       Cyrogem
+// @helpedby     Erik Gillespie, Kad
 // @site         https://www.cyrogemgames.com/
 // @match        https://*.melvoridle.com/*
 // @exclude      https://wiki.melvoridle.com/*
