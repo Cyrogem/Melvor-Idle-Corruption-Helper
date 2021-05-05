@@ -11,26 +11,8 @@
 // ==/UserScript==
 
 const skillSpecificModifiers = [
-  // inc skill hidden level
-  40,
-  // dec skill interval
-  92,
-  // dec skill interval %
-  93,
-  // inc skill preserve chance
-  95,
-  // inc mastery exp
-  103,
-  // inc skill exp
-  104,
-  // (old) probably inc skill interval
-  107,
-  // (old) probably inc skill interval %
-  108,
-  // inc chance to double in skill
-  132,
+  40, 95, 103, 104, 107, 108, 132,
 ]
-
 let allTraitsWanted = {}
 let newDesireTrait = -1
 let newDesireValue = -1
@@ -66,7 +48,7 @@ function CyrogemRollCorruption(){
     } else {
       atLeastOneKey = true
     }
-    //console.log(key + ' ' + value)
+    console.log(key + ' ' + value)
   }
 
   if (!atLeastOneKey){
@@ -106,7 +88,7 @@ function CyrogemRollCorruption(){
     } else {
       rolls--
       break;
-    }
+    }  
   }
   updateRandomModifierInfo(equipmentSlot);
   updateHTMLRandomMod(equipmentSlot, mods);
@@ -123,8 +105,7 @@ function CyrogemCheckCorruption(mods){
   for (let i = 0; i < mods.length && !success; i++) {
     let theMod = mods[i].modifier
     let theValue = mods[i].value
-    //console.log(theMod)
-    //console.log(theValue)
+    //console.log(theMod + ' ' + theValue)
     // Is the value a list
     if (theValue.length) {
       // This is a niche event, is this something we are looking for
@@ -152,16 +133,14 @@ function CyrogemCheckCorruption(mods){
 
 /**
  * Remember current desire to check against when we roll
- *
- * Also creates button to remove desire
+ * 
+ * Also creates button to remove desire 
  */
 function CyrogemAddDesire(){
   if (newDesireValue === -1 || newDesireValue === '' || newDesireTrait === -1 || (skillSpecificModifiers.includes(newDesireTrait) && newDesireSkill === -1)){
     window.alert('Please Select a Slot, Desired Trait(s), Desired Value(s), and a Desired Skill if aplicable')
     return;
   }
-
-
 
   let newmod = activeModifiers[newDesireTrait]
   // Is this a special case where we need a skill specified
@@ -180,12 +159,12 @@ function CyrogemAddDesire(){
   const displayElement = document.getElementById('cyrogem-current-desires')
   const buttonTemplate = document.getElementById('cyrogem-button-template')
   const newButton = document.importNode(buttonTemplate.content.firstElementChild, true)
-
+  
   // Is this a skill specific desire
   if(skillSpecificModifiers.includes(newDesireTrait)){
     let trait = activeModifiers[newDesireTrait]
     let skill = skillName[newDesireSkill]
-    newButton.id = 'kill-desire-' + trait + '-' + skill
+    newButton.id = 'kill-desire-' + trait + '-' + skill 
     newButton.innerHTML = printPlayerModifier(trait, [newDesireSkill, newDesireValue])[0]
     newButton.addEventListener('click', () => CyrogemRemoveDesire(trait, skill))
   } else {
@@ -196,9 +175,9 @@ function CyrogemAddDesire(){
   }
 
   displayElement.appendChild(newButton)
-
+  
   CyrogemUpdatePrediction()
-
+  
   // Debugging
   /*
   for(var key in allTraitsWanted) {
@@ -239,7 +218,7 @@ function CyrogemRemoveDesire(trait, skill=null){
   CyrogemUpdatePrediction()
 }
 
-// Erik Gillespie provided the solution to buttons losing eventHandlers
+// Erik Gillespie provided the solutino to buttons losing eventHandlers
 // A lot of old code was removed thanks to him
 const ErikTactic = true
 
@@ -283,7 +262,7 @@ function CyrogemUpdatePrediction(){
   let finalSuccessChance = 1 - Math.pow(oddsOfFailure, predictedNumberOfActualRolls)
   const headerOpen = '<h5 class="font-w400 font-size-sm text-center text-combat-smoke m-1 mb-2">'
   // Time to assemble the information to the user
-  predictionHTML += '<h3 class="font-w600 font-size-sm text-center text-danger m-1 mb-2">Corruption Prediction</h3>' +
+  predictionHTML += '<h3 class="font-w600 font-size-sm text-center text-danger m-1 mb-2">Corruption Prediction</h3>' + 
   headerOpen + 'Predicted rolls accounting for gold and item loss: <span class="font-w600 text-warning">' + predictedNumberOfActualRolls + '</span></h5>' +
   headerOpen + 'Chance of success in those rolls: ' + CyrogemRollChanceColor(finalSuccessChance) + '</h5>' +
   headerOpen + 'Predicted Max Cost: <img src="assets/media/main/coins.svg" class="skill-icon-xs mr-2">' + (costPerRoll * predictedNumberOfActualRolls) + '</h5>' +
@@ -343,7 +322,6 @@ function CyrogemDesiredTrait(index){
   newDesireTrait = index
   document.getElementById('cyrogem-desire-display-span').textContent = activeModifiers[newDesireTrait]
   // Does this target specific skills
-  //console.log(newDesireTrait)
   if (skillSpecificModifiers.includes(newDesireTrait)){
     console.log('more info needed')
     document.getElementById('cyrogem-desire-extra').className = ""
@@ -357,7 +335,7 @@ function CyrogemDesiredTrait(index){
  * @param {*} index index of the skill from skillName
  */
 function CyrogemDesiredSkill(index){
-  //console.log(index)
+  console.log(index)
   newDesireSkill = index
   document.getElementById('cyrogem-desire-extra-span').textContent = skillName[newDesireSkill]
 }
@@ -405,23 +383,6 @@ function CyrogemSelectSlot(slot){
   CyrogemUpdatePrediction()
 }
 
-function CyrogemSkipModifierInDesireList(modifier) {
-  if (modifier.includes('aprilFools')) {
-      return true;
-  }
-
-  let decreaseGood = false;
-  if (modifier.includes('PlayerAttackSpeed') || modifier.includes('MonsterRespawnTimer') || modifier.includes('SkillInterval')) {
-      decreaseGood = true;
-  };
-
-  if (decreaseGood) {
-      return modifier.includes('increase');
-  } else {
-      return modifier.includes('decrease');
-  }
-}
-
 /**
  * Load the tool, setup references, inject HTML
  */
@@ -432,10 +393,11 @@ function CyrogemLoadCorruptionHelper () {
     if (!bannedModifiers.includes(Object.keys(playerModifiersTemplate)[i]))
     activeModifiers.push(Object.keys(playerModifiersTemplate)[i]);
   }
-
+  
   // Setup the entire block
-  let playerDesiresHTML =
+  let playerDesiresHTML = 
   '<div class="block block-rounded block-link-pop border-top border-info border-4x row no-gutters">'
+
 
   // First Column
   playerDesiresHTML +=
@@ -443,9 +405,9 @@ function CyrogemLoadCorruptionHelper () {
   // Setup Desire Dropdown
   playerDesiresHTML +=
   '<div class="dropdown"><button type="button" class="btn btn-secondary dropdown-toggle mt-2" id="cyrogem-desire-dropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Desired Attribute</button>' +
-  '<div class="dropdown-menu font-size-sm" aria-labelledby="cyrogem-desire-dropdown" style="max-height: 800px; overflow-y: scroll;">'
+  '<div class="dropdown-menu font-size-sm" aria-labelledby="cyrogem-desire-dropdown">'
   for (let i = 0; i < activeModifiers.length; i++){
-    if (CyrogemSkipModifierInDesireList(activeModifiers[i])) continue;
+    if (activeModifiers[i].includes('decrease') || activeModifiers[i].includes('aprilFools')) continue;
     playerDesiresHTML += '<a class="dropdown-item" id="cyrogemDesiredTrait' + i + '" style="text-transform: capitalize;">' + activeModifiers[i] + '</a>'
   }
   playerDesiresHTML += '</div></div>' +
@@ -466,20 +428,20 @@ function CyrogemLoadCorruptionHelper () {
   // What value do you want
   playerDesiresHTML += '<div class="col-12"><input type="number" class="form-control m-1" id="cyrogem-desire-value" placeholder="0"></div>' +
   '<span class="font-w400 font-size-sm text-combat-smoke ml-2">Minimum Level: <span id="cyrogem-desire-display-value">Enter above</span></span>'
-
+  
   // What slot are we changing
   playerDesiresHTML +=
   '<div class="col-12"><button type="button" class="swal2-confirm swal2-styled" id="cyrogem-add-desire" aria-label="" style="display: inline-block; border-left-color: rgb(48, 133, 214); border-right-color: rgb(48, 133, 214);">Add Desire</button></div>'
-
+  
   // Close the content block and column div
   playerDesiresHTML += '</div></div>'
-
+  
 
   // Second column
   playerDesiresHTML += '<div class="col-sm-3"><div class=block-content>' +
   '<div class="col-12"><input type="number" class="form-control m-1" id="cyrogem-iterations" placeholder="0"></div>' +
   '<span class="font-w400 font-size-sm text-combat-smoke ml-2">Try how many times<br>(Assuming you can afford it): <span id="cyrogem-iterations-display">0</span></span>'
-
+  
   playerDesiresHTML += '<div class="dropdown"><button type="button" class="btn btn-secondary dropdown-toggle mt-2" id="cyrogem-slot-dropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" onclick="">' +
   'Slot to Roll For</button><div class="dropdown-menu font-size-sm" aria-labelledby="cyrogem-slot-dropdown">' +
   '<a class="dropdown-item" id="cyrogemSelectSlot0">Helmet</a>' +
@@ -503,8 +465,8 @@ function CyrogemLoadCorruptionHelper () {
   // Third column
   playerDesiresHTML += '<div class="col-md-5"><div class=block-content>'
 
-  // Display current wishes
-  playerDesiresHTML += '<h5 class="font-w700 font-size-sm text-center text-success m-1 mb-2">Desired Mods, Must have one, select any mod to remove it</h5>' +
+  // Display current wishes 
+  playerDesiresHTML += '<h5 class="font-w700 font-size-sm text-center text-success m-1 mb-2">Desired Mods, Must have one, select any mod to remove it</h5>' + 
   '<div class="text-center" id="cyrogem-current-desires"></div>'
 
   // Close the block and column div
@@ -519,12 +481,12 @@ function CyrogemLoadCorruptionHelper () {
   '<button type="button" class="swal2-confirm swal2-styled" id="cyrogem-roll-button" aria-label="" style="display: inline-block; border-left-color: rgb(48, 133, 214); border-right-color: rgb(48, 133, 214);">Roll For It</button></div>'
   // Close the column, row, and box div
   playerDesiresHTML += '</div></div></div>'
-
-  //document.getElementById('aprilfools2021-container').insertAdjacentHTML('afterbegin', playerDesiresHTML)
+  
+  //document.getElementById('aprilfools2021-container').insertAdjacentHTML('afterbegin', playerDesiresHTML) 
   playerDesiresHTML += document.getElementById('aprilfools2021-container').innerHTML
   document.getElementById('aprilfools2021-container').innerHTML = playerDesiresHTML
-
-
+  
+  
   // Setup trait links
   for(let i = 0; i < activeModifiers.length; i++){
     //console.log(i)
@@ -554,7 +516,7 @@ function CyrogemLoadCorruptionHelper () {
   document.getElementById('cyrogem-roll-button').addEventListener("click", () => CyrogemRollCorruption())
   // Setup desire button
   document.getElementById('cyrogem-add-desire').addEventListener("click", () => CyrogemAddDesire())
-
+  
   CyrogemUpdatePrediction()
 }
 
